@@ -1,0 +1,22 @@
+{
+  "name": "kurt_kinetic_ftp",
+  "version": "0.0.1",
+  "description": "Calculate functional threshold power based on speed data collected on a Kurt Kinetic Road Machine trainer.",
+  "main": "kurt_kinetic_ftp",
+  "dependencies": {
+    "fit": "~0.0.1",
+    "when": "~2.7.0",
+    "lodash": "~2.4.1"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/adamvaughan/kurt_kinetic_ftp"
+  },
+  "author": "Adam Vaughan",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/adamvaughan/kurt_kinetic_ftp/issues"
+  },
+  "homepage": "https://github.com/adamvaughan/kurt_kinetic_ftp"
+}

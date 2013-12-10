@@ -1,0 +1,129 @@
+#!/usr/bin/env node
+
+'use strict';
+
+var _ = require('lodash');
+var fs = require('fs');
+var fit = require('fit');
+var when = require('when');
+
+var readFile = function readFile(file) {
+  var deferred = when.defer();
+
+  fs.readFile(file, function (error, data) {
+    if (error) {
+      return deferred.reject(error);
+    }
+
+    deferred.resolve(data);
+  });
+
+  return deferred.promise;
+};
+
+var parseData = function parseData(data) {
+  var deferred = when.defer();
+
+  fit.parse(data, function (error, data) {
+    if (error) {
+      return deferred.reject(error);
+    }
+
+    deferred.resolve(data);
+  });
+
+  return deferred.promise;
+};
+
+var promptForInput = function promptForInput(prompt) {
+  var deferred = when.defer();
+
+  process.stdout.write(prompt + '  ');
+  process.stdin.setEncoding('utf8');
+
+  process.stdin.once('data', function (value) {
+    deferred.resolve(value.trim());
+  }).resume();
+
+  return deferred.promise;
+};
+
+var promptForSession = function promptForSession(data) {
+  if (data.sessions.length === 1) {
+    return when(data.sessions[0]);
+  }
+
+  return promptForInput('Which session (1-' + data.sessions.length + ')?')
+    .then(function (selection) {
+      selection = parseInt(selection, 10) - 1;
+
+      if (selection < 0 || selection > data.sessions.length - 1) {
+        process.stderr.write('Invalid selection!\n');
+        return promptForSession(data);
+      }
+
+      return data.sessions[selection];
+    });
+};
+
+var promptForLap = function promptForLap(session) {
+  if (session.laps.length === 1) {
+    return when(session.laps[0]);
+  }
+
+  return promptForInput('Which lap (1-' + session.laps.length + ')?')
+    .then(function (selection) {
+      selection = parseInt(selection, 10) - 1;
+
+      if (selection < 0 || selection > session.laps.length - 1) {
+        process.stderr.write('Invalid selection!\n');
+        return promptForLap(session);
+      }
+
+      return session.laps[selection];
+    });
+};
+
+var gatherLapData = function gatherLapData(data, lap) {
+  var startTime = Date.parse(lap.startTime);
+  var stopTime = startTime + (lap.totalElapsedTime * 1000);
+
+  var records = _.select(data.records, function (record) {
+    var timestamp = Date.parse(record.timestamp);
+    return timestamp >= startTime && timestamp <= stopTime;
+  });
+
+  return when(records);
+};
+
+var calculatePower = function calculatePower(record) {
+  var speed = record.speed * 2.23694;
+  return (5.244820 * speed) + (0.019168 * Math.pow(speed, 3));
+};
+
+var caclulateFunctionalThresholdPower = function caclulateFunctionalThresholdPower(data) {
+  var averagePower = _.reduce(data, function (sum, record) {
+    return sum + calculatePower(record);
+  }, 0) / data.length;
+
+  return averagePower * 0.95;
+};
+
+readFile(process.argv[2])
+  .then(parseData)
+  .then(function (data) {
+    return promptForSession(data)
+      .then(promptForLap)
+      .then(function (lap) {
+        return gatherLapData(data, lap)
+          .then(caclulateFunctionalThresholdPower);
+      });
+  })
+  .then(function (functionalThresholdPower) {
+    process.stdout.write('Functional Threshold Power: ' + Math.round(functionalThresholdPower) + ' watts\n');
+    process.exit();
+  })
+  .otherwise(function (error) {
+    process.stderr.write(error.message + '\n');
+    process.exit(1);
+  });
