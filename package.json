@@ -5,8 +5,8 @@
   "main": "kurt_kinetic_ftp",
   "dependencies": {
     "fit": "~0.0.1",
-    "when": "~2.7.0",
-    "lodash": "~2.4.1"
+    "lodash": "~2.4.1",
+    "q": "~0.9.7"
   },
   "devDependencies": {},
   "repository": {
